@@ -9,7 +9,7 @@ def main():
     #     "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
     # )
     # sample = ds[0]["audio"]['path']
-    sample = "1272-128104-0002.wav"
+    sample = "./example/1272-128104-0002.wav"
     print(sample)
     with open(sample, "rb") as f:
         resp = requests.post("http://localhost:8000/inference", data=f)
