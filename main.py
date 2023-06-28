@@ -46,8 +46,6 @@ class Inference(TypedMsgPackMixin, Worker):
     def __init__(self):
         # device = "cpu" 
         # compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
-        model_type = "small.en"
-        # model_type = "medium"
         device = "cuda" 
         compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
         
