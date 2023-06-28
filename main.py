@@ -1,15 +1,19 @@
-import torch, soundfile, io
+import io
 import numpy as np
-from transformers import WhisperProcessor
+from faster_whisper.feature_extractor import FeatureExtractor
+from faster_whisper.audio import decode_audio
 from mosec import Server, Worker, get_logger
+from mosec.mixin import TypedMsgPackMixin
 import mosec.errors
 from typing import List, Any
 import msgspec
-from mosec.mixin import TypedMsgPackMixin
 
 import whisperx
 logger = get_logger()
 
+model_type = "small"
+language = "en"
+sampling_rate = 16000
 class Request(msgspec.Struct):
     id: str
     binary: bytes
@@ -23,25 +27,19 @@ class Validation(TypedMsgPackMixin, Worker):
 
 class Preprocess(TypedMsgPackMixin, Worker):
     def __init__(self):
-        self.processor = WhisperProcessor.from_pretrained(
-            "openai/whisper-medium", language="Chinese", task="transcribe"
-            )
+        self.processor = FeatureExtractor()
 
     def forward(self, data):
         with io.BytesIO(data) as byte_io:
-            array, sampling_rate = soundfile.read(byte_io)
+            array = decode_audio(byte_io, sampling_rate)
         if len(array) == 2 and array.shape[1] == 2:
             # conbime the channel
             array = np.mean(array, 1)
         logger.info({"array": array, "sampling_rate": sampling_rate})
 
-        audio = {"array": array, "sampling_rate": sampling_rate}
-
-        res = self.processor(
-            audio["array"], sampling_rate=audio["sampling_rate"], return_tensors="pt"
-        )
+        feat = self.processor(array)
         logger.info('Preprocess finished')
-        return res.input_features
+        return feat[:,:self.processor.nb_max_frames]
 
 
 class Inference(TypedMsgPackMixin, Worker):
@@ -62,7 +60,7 @@ class Inference(TypedMsgPackMixin, Worker):
 
     def forward(self, data: List[Any]) -> List[Any]:
         logger.debug(len(data))
-        data = torch.cat(data, 0)
+        data = np.stack(data)
         logger.debug(data.shape)
 
         ids = self.model.model.generate_segment_batched(data, self.model.tokenizer, self.model.options)
