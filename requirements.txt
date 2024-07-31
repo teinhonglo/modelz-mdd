@@ -1,4 +1,2 @@
 mosec
-torch --extra-index-url https://download.pytorch.org/whl/cu117
-whisperx @ git+https://github.com/m-bain/whisperx.git
 msgspec
