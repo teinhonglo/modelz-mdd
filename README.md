@@ -13,7 +13,6 @@ to install `mosec` framework and other packages.
 # maximum 12 seconds
 python main.py --timeout 12000
 ```
-or
 ## Build Docker Image
 
 You can choose to use the one of the following method:
