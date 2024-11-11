@@ -1,4 +1,4 @@
-# WhisperX serving on Mosec
+# A E2E-MDD service on Mosec
 
 WhisperX splits single audio input into segments to parallel inference,
 but this project ONLY focus on using the batch-infernecing enabled **faster-whisper** to serve multiple request.
