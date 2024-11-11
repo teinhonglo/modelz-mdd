@@ -155,7 +155,8 @@ def calc_wer(r, h):
 if __name__ == "__main__":
     result = calc_wer("I love natural language processing".split(), "I like language processing a lot".split())
     print(result)
-
+    '''
     for r in result.split("\n")[:-2]:
         print(r)
         print(r.split(), len(r.split()))
+    '''

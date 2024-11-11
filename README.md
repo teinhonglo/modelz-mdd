@@ -10,7 +10,8 @@ Please follow https://github.com/m-bain/whisperX to install conda env, then
 to install `mosec` framework and other packages.
 ## Usage
 ```bash
-python main.py
+# maximum 12 seconds
+python main.py --timeout 12000
 ```
 or
 ## Build Docker Image
