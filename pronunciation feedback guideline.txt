@@ -1,0 +1,258 @@
+# 英語音素參考指南 (The 44 Phonemes in English)
+
+## 一、短元音 (Short Vowels)
+
+### 1. Short Vowel [æ]
+發音要點：舌尖輕輕抵住下排牙齒內部，發音時嘴巴拉開略成扁形
+示例詞：ant, apple, alligator, ambulance, hat
+特殊情況：any [ɛ], laugh [æ], plaid [æ]
+
+### 2. Short Vowel [ɛ] 
+發音要點：舌尖輕輕抵住下排牙齒，嘴巴張開一半
+示例詞：bed, egg, hen, pen, tent
+特殊情況：friend [ɛ], guest [ɛ], leopard [ɛ]
+
+### 3. Short Vowel [ɪ]
+發音要點：發音時嘴型自然微開，舌頭放鬆，發音嘴型很像說中文的數字一
+示例詞：bid, lid, lips, pin, wig
+
+### 4. Short Vowel [ɑ]
+發音要點：發音時嘴巴大開很像去看醫生檢查喉嚨的嘴型，舌頭放鬆，發音聽起來很像中文注音符號的ㄚ
+示例詞：dog, hot, log, mop, pot
+
+### 5. Short Vowel [ʌ]
+發音要點：發音時嘴巴半開，舌頭放鬆，發音聽起來像中文的"啊"
+示例詞：bus, cup, mug, sun, tub
+
+## 二、長元音 (Long Vowels)
+
+### 1. Long Vowel [e]
+拼寫模式：a_e, ai, ay, ea, ei, eigh, ey
+發音要點：把英文字母a的聲音拉長，舌頭慢慢接觸到上顎，發出聲音時嘴巴縮一點，嘴巴收成微開的形狀
+示例詞：
+- a_e: cake, bake
+- ai: rain, sail
+- ay: bay, say
+- ea: steak, break
+- ei: beige, reindeer
+- eigh: eight, sleigh
+- ey: hey, obey
+
+### 2. Long Vowel [i]
+拼寫模式：e, e_e, ee, ea, ei, ey, y
+發音要點：把英文字母e的聲音拉長，舌頭慢慢接觸到上顎，發出聲音時嘴巴縮一點
+示例詞：
+- e: he, she
+- e_e: gene, here
+- ee: bee, jeep
+- ea: seal, tea
+- ei: ceiling, receipt
+- ey: key, honey
+- y: baby, candy
+
+### 3. Long Vowel [aɪ]
+拼寫模式：i, i_e, ie, igh, ind, ild, y, y_e
+發音要點：為英文字母i的聲音，是雙母音。發音時嘴巴大開舌頭平放先發[a]的音，再發[ɪ]的聲音
+示例詞：
+- i: tiny, pilot
+- i_e: bike, kite
+- ie: pie, tie
+- igh: high, knight
+- ind: blind, kind
+- ild: child, wild
+- y: fly, shy
+- y_e: style, type
+
+### 4. Long Vowel [o]
+拼寫模式：o, o_e, oe, oa, ow
+發音要點：為英文字母o的聲音，o為雙母音。發音時嘴巴成圓狀，再收回圓唇
+示例詞：
+- o: no, piano
+- o_e: home, rope
+- oe: toe, hoe
+- oa: boat, soap
+- ow: show, yellow
+
+### 5. Long Vowel [ju; u]
+拼寫模式：u, u_e, eu, ew, oo, oe, ou, u, ui, ue
+發音要點：
+- [ju]: 為英文字母u的發音(=[j] + [u])
+- [u]: 嘟起嘴唇，發出類似注音符號ㄨ的聲音
+示例詞：
+- [ju]: music, uniform, cube, flute
+- [u]: moon, food, shoes, soup, ruby, ruler, fruit, juice, blue, glue
+
+## 三、其他元音 (Other Vowels)
+
+### 1. Short Vowel [ʊ]
+拼寫模式：o, oo, u, ou
+發音要點：微微嘟起嘴唇，發出類似注音符號ㄨ的聲音
+示例詞：
+- o: wolf, woman
+- oo: book, wood
+- u: bush, push, pull
+- ou: would, could, should
+
+### 2. Short Vowel [ɔ]
+拼寫模式：all, aw, au, augh, ough
+發音要點：發此音時雙唇微開成小小O型
+示例詞：
+- all: fall, mall
+- aw: paw, saw
+- au: haunted, sauce
+- augh: daughter, taught
+- ough: bought, thought
+
+### 3. Diphthong [ɔɪ]
+拼寫模式：oi, oy
+發音要點：為雙母音:[ɔ] + [ɪ]。先發出[ɔ]的聲音，雙唇微開成小小O型，再發[ɪ]的聲音
+示例詞：
+- oi: coin, boil, oil, point
+- oy: boy, enjoy, oyster, toy
+
+### 4. Diphthong [aʊ]
+拼寫模式：ou, ow
+發音要點：為雙母音:[a] + [ʊ]。先發出[a]的聲音，嘴巴大開，再嘟起雙唇發[ʊ]的音
+示例詞：
+- ou: cloud, couch, house, playground
+- ow: bow, owl, town, powder
+
+### 5. Schwa [ə]
+特點：為非重音節的輕母音。發此音時，嘴巴微開，發音聽起來像注音符號ㄜ的輕聲
+示例詞：
+- a: banana, zebra
+- e: elephant, telephone
+- i: animal, pencil
+- o: dinosaur, lemon
+- u: album, campus
+- y: analysis, syringe
+
+## 四、R控制元音 (R-Controlled Vowels)
+
+### 1. R-Controlled Vowels [ɑr, ɝ, ɔr]
+發音要點：
+- ar [ɑr]: 發此音時嘴巴大開很像去看醫生檢查喉嚨的嘴型並輕捲舌頭
+- er [ɝ]: 發此音時舌頭往內捲
+- ir [ɝ]: 發此音時舌頭往內捲
+- or [ɔr]: 發此音時嘴巴呈小小o型並輕捲舌頭
+- ur [ɝ]: 發此音時舌頭往內捲
+
+示例詞：
+- ar: arm, car
+- er: finger, teacher
+- ir: circus, shirt
+- or: corn, pork
+- ur: church, fur
+
+特殊情況：
+or, ear, our 在某些字中也發[ɝ]的聲音：
+- or [ɝ]: word, world, work
+- ear [ɝ]: early, heard, learn
+- our [ɝ]: courage, journal, journey
+
+### 2. R-Controlled Vowel [ɔr]
+拼寫模式：oar, oor, ore, our
+發音要點：發此音時嘴巴呈小小o型並輕捲舌頭
+示例詞：
+- oar: board, roar
+- oor: door, floor
+- ore: bored, score
+- our: four, pour
+
+### 3. R-Controlled Vowel [ɛr]
+拼寫模式：air, are, ere, eir
+發音要點：發此音時舌尖輕輕抵住下排牙齒，嘴巴張開一半並輕捲舌頭
+示例詞：
+- air: hair, chair
+- are: mare, dare
+- ere: there, where
+- eir: heir, their
+
+## 五、輔音 (Consonants)
+
+### 1. 成對輔音 (Paired Consonants)
+
+#### b [b] vs p [p]
+發音要點：
+- [b]: 有聲子音，發音時喉嚨振動。發此音時上唇和下唇接觸，放開時發音
+- [p]: 無聲子音，發音時喉嚨不振動。發此音時上唇和下唇接觸，放開時送氣不發音
+示例詞：
+- b: bean, bow, tub
+- p: pig, park, mop
+
+#### d [d] vs t [t]
+發音要點：
+- [d]: 有聲子音，發音時喉嚨振動。將舌頭抵住上排牙齒後，舌頭快速放開發出聲音
+- [t]: 無聲子音，發音時喉嚨不振動。將舌頭抵住上排牙齒後，舌頭快速放開發出聲音
+示例詞：
+- d: doll, lid, add, pudding
+- t: tea, paint, letter, kettle
+
+#### g [g] vs k [k]
+發音要點：
+- [g]: 有聲子音，發音時喉嚨振動。發此音時舌根靠近喉嚨的位置
+- [k]: 無聲子音，發音時喉嚨不振動。發此音時舌根靠近喉嚨的位置，輕輕發出聲音
+示例詞：
+- g: goat, egg, foggy, ghost
+- k/c/ck/ch/-que: kite, cake, deck, peck, Christmas, unique
+
+#### v [v] vs f [f]
+發音要點：
+- [v]: 有聲子音，發音時喉嚨振動。發此音時上排牙齒輕碰下唇，接著發出聲音
+- [f]: 無聲子音，發音時喉嚨不振動。發此音時將舌頭抵住上排牙齒後，接著輕吐氣音
+示例詞：
+- v: van, vase, video
+- f/ff/gh/ph: fish, five, giraffe, stuffed, laugh, cough, phone, photo
+
+#### z [z] vs s [s]
+發音要點：
+- [z]: 有聲子音，發音時喉嚨振動。發此音時將舌頭放到上排牙齒內部，接著發出像蛇在吐信時嘶嘶的聲音
+- [s]: 無聲子音，發音時喉嚨不振動。發此音時將舌頭放到上排牙齒內部接著發出像蛇在吐信時嘶嘶的聲音
+示例詞：
+- z/zz/s/se/ze/ss: zebra, jazz, has, cheese, maze, scissors
+- s/ss/c/sc/se/ce: sun, pass, cigar, science, horse, rice
+
+#### Soft th [θ] vs Hard th [ð]
+發音要點：
+- [θ]: 無聲子音，發音時將舌頭前端放到上下牙齒之間，接著吐氣發出聲音
+- [ð]: 有聲子音，發音時將舌頭前端放到上下牙齒之間，接著發出聲音
+示例詞：
+- [θ]: three, think, throw
+- [ð]: this, feather, mother
+
+#### sh [ʃ] vs ge [ʒ]
+發音要點：
+- [ʃ]: 無聲子音，發音時將舌頭前部位提高，靠近上顎，噘起嘴巴，然後吹氣
+- [ʒ]: 有聲子音，發音時將舌頭前部位提高，靠近上顎，噘起嘴巴，然後發出聲音
+示例詞：
+- sh: shark, passion, bus station, special, sure
+- ge/s: garage, casual, treasure, television
+
+#### ch [tʃ] vs ge [dʒ]
+發音要點：
+- [tʃ]: 無聲子音，發音時將舌頭放到上顎，然後發出聲音
+- [dʒ]: 有聲子音，發音時將舌頭放到上顎，噘起嘴巴，發出聲音時舌頭不離開上顎
+示例詞：
+- ch: church, cheese, picture, nature
+- j/g/ge/dge: juice, judge, giant, gym, page, cage, bridge, edge
+
+### 2. 其他輔音 (Other Consonants)
+
+#### h [h]
+發音要點：無聲子音，發音時嘴巴微張發出像呵氣的聲音
+示例詞：hot, hand, hug, who, whole
+
+#### l [l]
+發音要點：
+- 字首：把舌尖和舌頭前面輕碰上排牙齒內部，舌頭再快速離開讓氣音流出
+- 字尾：把舌尖和舌頭前面輕碰上排牙齒內部，舌頭不離開發出聲音
+示例詞：
+- 字首：lion, leave, lamp
+- 字尾：pool, bell, sell, mall
+
+#### m [m]
+發音要點：
+- 字首/字中：上唇輕碰下唇，放開時鼻子用一點點力,可聽到鼻音
+- 字尾：上唇輕碰下唇，鼻子用一點點力，可聽到鼻音，嘴巴需閉起來
+示例詞：
+- 字首：monkey, mouse, mat

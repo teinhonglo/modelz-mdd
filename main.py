@@ -10,6 +10,12 @@ import torchaudio
 from transformers import Wav2Vec2Processor
 from datasets import load_from_disk
 
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(current_dir, 'LLMsPhonemesFeedback'))
+
+from gpt4dataset＿generate import GenerateText
+
 # local import
 from utils import make_dataset, load_from_json
 from models.wav2vec2_model import AutoMDDModel, AutoDualMDDModel, AutoProtoMDDModel
@@ -132,7 +138,7 @@ class Inference(TypedMsgPackMixin, Worker):
     def __init__(self):
         # device = "cpu" 
         # compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
-        device = "cuda:1" 
+        device = "cuda:0" 
         compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
         model_path = "exp/l2arctic/train_l2arctic_baseline_wav2vec2_large_lv60_timitft_prompt"
 
@@ -193,6 +199,22 @@ class Inference(TypedMsgPackMixin, Worker):
 
         prompt = " ".join(re.sub(r'sil', '', prompt).split())
         pred_phones = " ".join(re.sub(r'sil', '', pred_phones).split())
+
+
+        gt = GenerateText()
+# 跟讀文本:{str(data[2])}。
+        text = f'''為我輸出對L2學習者的反饋，
+對應的正確發音pronunciation為：{prompt}。
+實際的發音pronunciation為: {pred_phones}。
+請先對正確pronunciation和實際pronunciation進行分詞，
+然後找到每個word對應的pronunciation，
+接著通過對比每個word的pronunciation，
+找到其中存在的替換，刪除，插入錯誤，
+然後對錯誤地方，給出有實際幫助的建議。'''
+
+        print("text: ",text)
+        feedback_result = gt.getText(text)
+
         per_result = calc_wer(prompt.split(), pred_phones.split())
         print(f"word_boundaries_list: {word_boundaries_list}")
         print(per_result)
@@ -205,7 +227,7 @@ class Inference(TypedMsgPackMixin, Worker):
         '''
          [
             {"word1":
-                    [
+                    [ 
                         {"phone1": "C"}, 
                         {"phone2": "D"}
                     ]
@@ -217,6 +239,7 @@ class Inference(TypedMsgPackMixin, Worker):
             } 
         ]
         '''
+
         dictate_list = []
         prompt_list = prompt.split()
 
@@ -232,10 +255,12 @@ class Inference(TypedMsgPackMixin, Worker):
         
         capt_dict = {"Dictate": dictate_list}
         
+        capt_dict.update({"Feedback": feedback_result})
+
         print(capt_dict)
         logger.info("Inference Finished")
         
-        return [json.dumps(capt_dict)]
+        return [json.dumps(capt_dict, ensure_ascii=False)]
     
     def serialize(self, data):
         return data.encode("utf-8")
