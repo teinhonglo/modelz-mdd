@@ -16,7 +16,8 @@ def main():
     req = {
         "binary": binary,
         "id": "1",
-        "prompt": "Something good just happened"
+        "prompt": "Something good just happened",
+        "do_g2p": True
     }
     
     resp = requests.post(url, data=msgpack.packb(req))

@@ -30,41 +30,43 @@ import msgspec
 
 logger = get_logger()
 
-model_type = "small"
-language = "en"
-sampling_rate = 16000
-
 class Request(msgspec.Struct):
     id: str
     binary: bytes
     prompt: str
+    do_g2p: bool
 
 class Validation(TypedMsgPackMixin, Worker):
     def forward(self, web_data: Request):
         if web_data.id != "1":
             raise mosec.errors.ValidationError("id not 1")
         
-        return web_data.binary, web_data.prompt
+        return web_data.binary, web_data.prompt, web_data.do_g2p
 
 class Preprocess(TypedMsgPackMixin, Worker):
     def __init__(self):
         self.g2p = G2p()
+        self.sampling_rate = 16000
 
     def forward(self, data):
-        data, word_text = data  # unpack data and prompt
+        data, word_text, do_g2p = data  # unpack data and prompt
+        
         with io.BytesIO(data) as byte_io:
-            audio_array = self.decode_audio(byte_io, sampling_rate)
+            audio_array = self.decode_audio(byte_io, self.sampling_rate)
 
         if len(audio_array) == 2 and audio_array.shape[1] == 2:
             # conbime the channel
             audio_array = np.mean(audio_array, 1)
 
-        logger.info({"audio_array": audio_array, "sampling_rate": sampling_rate})
+        logger.debug(f"Get audio_array: {audio_array}, do_g2p : {do_g2p}, prompt : {word_text}")
 
         # g2p 
         # TODO: add sil
         # words to phones
-        phone_list = self.g2p(word_text) # ['HH', 'AW1', 'Z', ' ', 'DH', 'AH0', ' ', 'W', 'EH1', 'DH', 'ER0', ' ', 'T', 'AH0', 'D', 'EY1']
+        if do_g2p:
+            phone_list = self.g2p(word_text) # ['HH', 'AW1', 'Z', ' ', 'DH', 'AH0', ' ', 'W', 'EH1', 'DH', 'ER0', ' ', 'T', 'AH0', 'D', 'EY1']
+        else:
+            phone_list = [ ' ' if phn == "SIL" else phn for phn in word_text.split() ]
 
         # remove spaces
         new_phone_list = []
@@ -92,7 +94,7 @@ class Preprocess(TypedMsgPackMixin, Worker):
         # to lowercase
         prompt = phone_text.lower()
 
-        logger.info('Preprocess finished')
+        logger.info("Preprocess finished")
         
         return audio_array, prompt, word_boundaries
 
@@ -129,11 +131,15 @@ class Preprocess(TypedMsgPackMixin, Worker):
 
 
 class Inference(TypedMsgPackMixin, Worker):
-    def __init__(self, model_path="models/mdd/exp/l2arctic/train_l2arctic_baseline_wav2vec2_large_lv60_timitft_prompt", device="cuda:0"):
+    def __init__(self, 
+                 model_path="models/mdd/exp/l2arctic/train_l2arctic_baseline_wav2vec2_large_lv60_timitft_prompt", 
+                 device="cuda:0", sampling_rate=16000):
         # device = "cpu" 
         # compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
-        compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
-
+        self.compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
+        self.device = device
+        self.sampling_rate = sampling_rate
+        
         train_conf_path = os.path.join(model_path, "train_conf.json")
         config_path = os.path.join(model_path, "config.pth")
         best_model_path = os.path.join(model_path, "best")
@@ -143,7 +149,6 @@ class Inference(TypedMsgPackMixin, Worker):
         
         # load config and model
         config = torch.load(config_path)
-        self.device = device
         self.processor = Wav2Vec2Processor.from_pretrained(model_path)
         self.model = AutoMDDModel(model_args, config=config).to(device)
         
@@ -158,7 +163,7 @@ class Inference(TypedMsgPackMixin, Worker):
             vocab.append(token)
         
         self.decoder = GreedyDecoder(vocab, blank_index=vocab.index(self.processor.tokenizer.pad_token))
-        logger.info(f'Model loaded {model_type} {device} {compute_type}')
+        logger.info(f'Model loaded {self.device}')
 
         # Warm up
         logger.info('Warm up finished')
@@ -174,7 +179,7 @@ class Inference(TypedMsgPackMixin, Worker):
         audio_array = np.stack(audio_array_list)[0]
         prompt = " ".join(prompt_list)
         
-        input_values = self.processor(audio_array, sampling_rate=16000).input_values[0]
+        input_values = self.processor(audio_array, sampling_rate=self.sampling_rate).input_values[0]
         input_values = torch.tensor(input_values, device=self.device).unsqueeze(0)
 
         with self.processor.as_target_processor():
@@ -192,27 +197,26 @@ class Inference(TypedMsgPackMixin, Worker):
         prompt = " ".join(re.sub(r'sil', '', prompt).split())
         pred_phones = " ".join(re.sub(r'sil', '', pred_phones).split())
         per_result = calc_wer(prompt.split(), pred_phones.split())
-        print(f"word_boundaries_list: {word_boundaries_list}")
-        print(per_result)
+        logger.debug(f"word_boundaries_list: {word_boundaries_list}")
 
         eval_result = per_result.split("\n")[:-2][-1].split()[1:]
         eval_result_noins = [ er for er in eval_result if er != "I"]
 
-        print(f"eval_result: {eval_result}")
-        print(f"eval_result_noins: {eval_result_noins}")
+        logger.debug(f"eval_result: {eval_result}")
+        logger.debug(f"eval_result_noins: {eval_result_noins}")
         '''
          [
-            {"word1":
+            ["word1"]:
                     [
-                        {"phone1": "C"}, 
-                        {"phone2": "D"}
+                        ["phone1": "C"], 
+                        ["phone2": "D"]
                     ]
             }, 
-            {"word2":
+            ["word2":
                     [
-                        {"phone1": "S"}
+                        ["phone1": "S"]
                     ]
-            } 
+            ] 
         ]
         '''
         dictate_list = []
@@ -222,22 +226,19 @@ class Inference(TypedMsgPackMixin, Worker):
             word, idx_info = word_info
             start_idx, end_idx = idx_info
             phones = prompt[start_idx:end_idx]
-            phones_eval_list = [ {prompt_list[i]: eval_result_noins[i]} for i in range(start_idx,end_idx)]
+            phones_eval_list = [[prompt_list[i], eval_result_noins[i]] for i in range(start_idx,end_idx)]
 
-            dictate_list.append({word: phones_eval_list})
-        
-        print(dictate_list)
+            dictate_list.append([word, phones_eval_list])
         
         capt_dict = {"Dictate": dictate_list}
         
-        print(capt_dict)
+        logger.debug(capt_dict)
         logger.info("Inference Finished")
         
         return [json.dumps(capt_dict)]
     
     def serialize(self, data):
         return data.encode("utf-8")
-
 
 if __name__ == "__main__":
     server = Server()
