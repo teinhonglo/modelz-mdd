@@ -16,7 +16,7 @@ This will install the `mosec` framework and other necessary packages.
 Run the following command (with a maximum duration of 12 seconds):
 
 ```bash
-python main.py --timeout 12000
+python app.py --timeout 12000
 ```
 
 ## Build Docker Image
