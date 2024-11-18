@@ -84,7 +84,7 @@ python client.py
 
 ---
 
-## ** Acknowledgement **
+## **Acknowledgement**
 This project was made possible through the contributions of:
 - Fu-An Chao (Wav2vec2-mdd)
 - Yu-Hsuan Fang (LLM Feedback)
