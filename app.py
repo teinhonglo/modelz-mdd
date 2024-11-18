@@ -247,7 +247,7 @@ class Inference(TypedMsgPackMixin, Worker):
             prompt_ids = self.processor(prompt_phones).input_ids
             prompt_ids = torch.tensor(prompt_ids, device=self.device).unsqueeze(0)
         
-        self.compute_gop(labels=prompt_ids, logits=logits, loss=loss)
+        gop_dict = self.compute_gop(labels=prompt_ids, logits=logits, loss=loss)
 
         eval_result = per_result.split("\n")[:-2][-1].split()[1:]
         eval_result_noins = [ er for er in eval_result if er != "I"]
@@ -265,8 +265,8 @@ class Inference(TypedMsgPackMixin, Worker):
         
         capt_dict = {
             "Dictate": dictate_list, 
-            "transcript": predict_phones, 
-            "feedback": fb_result
+            "Transcript": predict_phones, 
+            "Feedback": fb_result
         }
         
         logger.debug(capt_dict)
@@ -284,19 +284,17 @@ class Inference(TypedMsgPackMixin, Worker):
         
         pids = labels.tolist()
         num_labels = len(labels)
-        masks = [torch.arange(num_labels) != i for i in range(num_labels)]
         post_mat = logits.softmax(dim=-1).transpose(0,1)
         
         for i, pid in enumerate(pids):
             gop_feats = [log_like_total]
-            new_labels = labels[masks[i]]
-            ctc = self.ctc_loss(post_mat, new_labels, blank=0)
-            # lpp & lpr
-            gop_feats.append(-torch.log(ctc))
-            gop_feats.append(-log_like_total-torch.log(ctc))
-            print(pid, gop_feats)
-    
-    def ctc_loss(self, params, seq, blank=0):
+            ll_denom = ctc_loss_denom(post_mat, labels, i, blank=0)
+            gop = -ll_self + ll_denom
+            print(pid, gop)
+            
+        return gop
+            
+    def ctc_loss_denom(self, params, seq, pos, blank=0):
         """
         CTC loss function.
         params - n x m matrix of n-D probability distributions(softmax output) over m frames.
@@ -307,33 +305,85 @@ class Inference(TypedMsgPackMixin, Worker):
         numphones = params.shape[0] # Number of labels
         L = 2*seqLen + 1 # Length of label sequence with blanks
         T = params.shape[1] # Length of utterance (time)
+        P = params.shape[0] # number of tokens    
+    
+        ## constraint mask for disabling insertion, and in this version we don't allow phoneme->blank but remains in the arbitrary state 
+        mask_ins = torch.eye(P)
+        #mask_ins[blank,:] = torch.ones(P)
         
-        alphas = torch.zeros((L,T)).double()
-        # Initialize alphas and forward pass 
-        alphas[0,0] = params[blank,0]
-        alphas[1,0] = params[seq[0],0]
-        
-        for t in range(1, T):
-            start = max(0, L-2*(T-t)) 
-            end = min(2*t+2, L)
-            for s in range(start, L):
+        ##extend the tensor to save "arbitrary state"
+        alphas = torch.zeros((L,T,P)).double()
+    
+        # Initialize alphas 
+        if pos == 0:
+            alphas[0,0,0] = params[blank,0]
+            # in this version we don't allow initial with the second blank,  it will simplifiy the later computation especially for the “normalized” version
+            alphas[2,0,0] = 0
+            alphas[3,0,0] = params[seq[1],0]
+            
+            alphas[1,0] = params[0:,0]  #an list all tokens
+            alphas[1,0,0] = 0  #can't stay at blank, same as the alphas[0,0,0]
+        else:
+            alphas[0,0,0] = params[blank,0]
+            alphas[1,0,0] = params[seq[0],0]
+            
+        for t in range(1,T):
+            if pos == seqLen-1: ###different from non-composed one, +1 below for possible skip paths at the final states
+                lowest_state = L-2*(T-t+1)
+            else:
+                lowest_state = L-2*(T-t)
+            start = max(0,lowest_state) 
+            for s in range(start,L):
                 l = int((s-1)/2)
                 # blank
                 if s%2 == 0:
                     if s==0:
-                        alphas[s, t] = alphas[s, t-1] * params[blank,t]
+                        alphas[s,t,0] = alphas[s,t-1,0] * params[blank,t]
                     else:
-                        alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1]) * params[blank, t]
-                # same label twice
-                elif s == 1 or seq[l] == seq[l-1]:
-                    alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1]) * params[seq[l], t]
-                else:
-                    alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1] + alphas[s-2, t-1]) \
-                        * params[seq[l], t]
-                
-        forward_prob = (alphas[L-1, T-1] + alphas[L-2, T-1])
-        
-        return forward_prob
+                        sum = check_arbitrary(alphas, s-1, t-1, [blank]) 
+                        if sum: ## the first blank(for current t) after the arbitrary state,need to collect the probability from the additional dimension
+                            ##in this version no need to remove for t=1, because state 2 is not initialized anymore
+                            alphas[s,t,0] = (alphas[s,t-1,0] + sum) * params[blank,t]
+                        else:
+                            alphas[s,t,0] = (alphas[s,t-1,0] + alphas[s-1,t-1,0]) * params[blank,t]
+                elif pos != l and pos != l-1:
+                    if s == 1 or seq[l] == seq[l-1]:   # the first label or same label twice
+                        alphas[s,t,0] = (alphas[s,t-1,0] + alphas[s-1,t-1,0]) * params[seq[l],t]
+                    else:
+                        alphas[s,t,0] = (alphas[s,t-1,0] + alphas[s-1,t-1,0] + alphas[s-2,t-1,0]) \
+                            * params[seq[l],t]
+                elif pos == l-1: #last token is the arbitrary token, need to collect the probability from the additional dimension, and also consider the skip paths
+                    sum = check_arbitrary(alphas, s-2, t-1, [blank,seq[l]])  ##remove the entry of the blank and the  "l"th token in the last dim, because it's already covered in other terms with the same path
+                    if l-2 < 0 or seq[l-2] == seq[l]: ###dont allow token skip
+                        skip_token = 0
+                    else:
+                        skip_token = alphas[s-4,t-1,0] * params[seq[l],t]
+                    ##we allow skip empty in this version, following the graph in the paper. No need to remove because the state[s-1] is blocked for skip.
+                    ##also we allow skip empty because we removed the state 2 probability in intialization
+                    skip_empty = alphas[s-3,t-1,0] * params[seq[l],t] 
+                    alphas[s,t,0] = (alphas[s,t-1,0] + alphas[s-1,t-1,0] + sum ) * params[seq[l],t] + skip_empty + skip_token
+                else: #current pos can be arbitrary tokens, use the boardcast scale product to allow all the paths       
+                    if s == 1: #the blank pathes from the first term is already removed for t=0 at initial step, so we don't do it again
+                        empty_prob = alphas[s-1,t-1,0] * params[:,t]
+                        empty_prob[0] = 0
+                        alphas[s,t,:] = (alphas[s,t-1,:].view(1,-1) * params[:,t].view(-1,1) * mask_ins).sum(-1) + empty_prob
+                    else: #enterting wildcard state, for the skip path and empty path, we need to remove the pos of the same label and blank token to avoid duplicated paths. 
+                        skip_prob = alphas[s-2,t-1,0] * params[:,t]  
+                        skip_prob[seq[l-1]] = 0    
+                        skip_prob[0] = 0    
+    
+                        empty_prob = alphas[s-1,t-1,0] * params[:,t]
+                        empty_prob[0] = 0
+    
+                        alphas[s,t,:] = (alphas[s,t-1,:].view(1,-1) * params[:,t].view(-1,1) * mask_ins).sum(-1) + skip_prob + empty_prob
+             
+        sum = check_arbitrary(alphas, L-2, T-1, [blank])    
+        if sum: # last label is arbitrary,  we need the skip path alphas[L-3, T-1, 0] + alphas[L-4, T-1, 0]
+            llForward = torch.log(alphas[L-1, T-1, 0] + sum + alphas[L-3, T-1, 0] + alphas[L-4, T-1, 0])
+        else:
+            llForward = torch.log(alphas[L-1, T-1, 0] + alphas[L-2, T-1, 0])
+    
+        return -llForward
 
 if __name__ == "__main__":
     server = Server()
