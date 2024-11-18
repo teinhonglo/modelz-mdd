@@ -1,4 +1,4 @@
-# End-to-End Mispronunciation Detection and Diagnosis (MDD) Service
+# [WIP] End-to-End Mispronunciation Detection and Diagnosis (MDD) Service
 
 This project implements an **End-to-End Mispronunciation Detection and Diagnosis (E2E-MDD)** service based on an **end-to-end phone recognizer** using **wav2vec CTC**. The goal is to provide:
 
@@ -27,11 +27,28 @@ This project implements an **End-to-End Mispronunciation Detection and Diagnosis
 
 ### Step 1: Install Dependencies
 Follow these steps to set up the environment:
-1. Install the Conda environment as described in the [WhisperX GitHub repository](https://github.com/m-bain/whisperX) (Note: WhisperX itself is not used in this project).
-2. Install additional required packages by running:
-   ```bash
-   pip install -r requirements.txt
-   ```
+1.  conda environment
+```
+conda create -n wav2vec2-mdd python==3.8.0
+conda activate wav2vec2-mdd
+```
+
+2. install requirements
+```
+pip install -r requirements.txt
+```
+
+3. torch cuda version ( see https://pytorch.org/get-started/previous-versions) )  
+```
+pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu116
+```
+
+
+4. Assuming you've already installed HuggingFace transformers library, you need also to install the ctcdecode library
+```
+git clone --recursive https://github.com/parlance/ctcdecode.git
+cd ctcdecode && pip install .
+```
 
 ### Step 2: Prepare the Model
 1. Download the pre-trained model:
