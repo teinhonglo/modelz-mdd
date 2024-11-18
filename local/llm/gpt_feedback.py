@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time       : 11/17/2024
-# @Author     : Yu-Husan Fang (Original version created by him; thanks a lot!)
+# @Author     : Yu-Hsuan Fang (Original version created by him; thanks a lot!)
 # @Affiliation: National Taiwan Normal University and EZAI
 
 import json
