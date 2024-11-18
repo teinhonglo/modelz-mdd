@@ -1,0 +1,6 @@
+OPENAI_API_KEY: "PUT_YOUR_OPENAI_API_KEY"
+model: "gpt-4o"
+store-path: "./data"
+feature: "請使用zh-tw正體中文進行回覆"
+name: "ntnu"
+feedback_guideline: "conf/feedback_guideline.txt"

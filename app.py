@@ -9,6 +9,7 @@ import torch
 import torchaudio
 from transformers import Wav2Vec2Processor
 from datasets import load_from_disk
+import soundfile as sf
 
 # local import
 from utils import make_dataset, load_from_json
@@ -28,12 +29,16 @@ import mosec.errors
 from typing import List, Any, BinaryIO, Union
 import msgspec
 
+# llm
+from local.llm.gpt_feedback import GenerateText
+
 logger = get_logger()
 
 class Request(msgspec.Struct):
     id: str
     binary: bytes
-    prompt: str
+    prompt_words: str
+    prompt_phones: str
     do_g2p: bool
 
 class Validation(TypedMsgPackMixin, Worker):
@@ -41,7 +46,7 @@ class Validation(TypedMsgPackMixin, Worker):
         if web_data.id != "1":
             raise mosec.errors.ValidationError("id not 1")
         
-        return web_data.binary, web_data.prompt, web_data.do_g2p
+        return web_data.binary, web_data.prompt_words, web_data.prompt_phones, web_data.do_g2p
 
 class Preprocess(TypedMsgPackMixin, Worker):
     def __init__(self):
@@ -49,7 +54,7 @@ class Preprocess(TypedMsgPackMixin, Worker):
         self.sampling_rate = 16000
 
     def forward(self, data):
-        data, word_text, do_g2p = data  # unpack data and prompt
+        data, word_text, phn_text, do_g2p = data  # unpack data and prompt
         
         with io.BytesIO(data) as byte_io:
             audio_array = self.decode_audio(byte_io, self.sampling_rate)
@@ -62,11 +67,12 @@ class Preprocess(TypedMsgPackMixin, Worker):
 
         # g2p 
         # TODO: add sil
-        # words to phones
+        # words to phone
+        # ['HH', 'AW1', 'Z', ' ', 'DH', 'AH0', ' ', 'W', 'EH1', 'DH', 'ER0', ' ', 'T', 'AH0', 'D', 'EY1']
         if do_g2p:
-            phone_list = self.g2p(word_text) # ['HH', 'AW1', 'Z', ' ', 'DH', 'AH0', ' ', 'W', 'EH1', 'DH', 'ER0', ' ', 'T', 'AH0', 'D', 'EY1']
+            phone_list = self.g2p(word_text)
         else:
-            phone_list = [ ' ' if phn == "SIL" else phn for phn in word_text.split() ]
+            phone_list = [ ' ' if phn == "SIL" else phn for phn in phn_text.split() ]
 
         # remove spaces
         new_phone_list = []
@@ -77,10 +83,12 @@ class Preprocess(TypedMsgPackMixin, Worker):
         word_start_idx = 0
         word_end_idx = 0
         last_word = word_list[0]
-
+        
+        # Create word boundaries (without the SIL token)
         for idx, phone in enumerate(phone_list):
             if phone != " ":
                 new_phone_list.append(phone)
+            
             if phone == " " or idx == len(phone_list) - 1:
                 word = word_list[word_idx]
                 word_end_idx = len(new_phone_list)
@@ -88,12 +96,15 @@ class Preprocess(TypedMsgPackMixin, Worker):
                 word_idx += 1
                 word_start_idx = len(new_phone_list)
         
-        phone_text = " ".join(new_phone_list)
+        # Added silence
+        phone_text = " ".join([ "SIL" if phn == " " else phn for phn in phone_list])
+        phone_text = "SIL " + phone_text + " SIL"
         # remove digits
         phone_text = re.sub("[0-9]", "", phone_text)
         # to lowercase
         prompt = phone_text.lower()
-
+        
+        logger.info(f"Prompt: {prompt}, word_boundaries: {word_boundaries}")
         logger.info("Preprocess finished")
         
         return audio_array, prompt, word_boundaries
@@ -133,7 +144,7 @@ class Preprocess(TypedMsgPackMixin, Worker):
 class Inference(TypedMsgPackMixin, Worker):
     def __init__(self, 
                  model_path="models/mdd/exp/l2arctic/train_l2arctic_baseline_wav2vec2_large_lv60_timitft_prompt", 
-                 device="cuda:0", sampling_rate=16000):
+                 device="cuda:1", sampling_rate=16000):
         # device = "cpu" 
         # compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
         self.compute_type = "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
@@ -150,9 +161,10 @@ class Inference(TypedMsgPackMixin, Worker):
         # load config and model
         config = torch.load(config_path)
         self.processor = Wav2Vec2Processor.from_pretrained(model_path)
-        self.model = AutoMDDModel(model_args, config=config).to(device)
-        
+        self.model = AutoMDDModel(model_args, config=config).to(device)    
         self.model.load_state_dict(torch.load(best_model_path+"/pytorch_model.bin", map_location=device))
+        self.model.eval()
+        
         vocab_dict = self.processor.tokenizer.get_vocab()
         sort_vocab = sorted((value, key) for (key,value) in vocab_dict.items())
         
@@ -164,9 +176,25 @@ class Inference(TypedMsgPackMixin, Worker):
         
         self.decoder = GreedyDecoder(vocab, blank_index=vocab.index(self.processor.tokenizer.pad_token))
         logger.info(f'Model loaded {self.device}')
+        
+        self.llm_feedback = GenerateText()
 
         # Warm up
+        sample = "./example/Something_good_just_happened.wav"
+        prompt_phones = "sil s ah m th ih ng sil g uh d sil jh ah s t sil hh ae p ah n d sil"
+        audio_array, sample_rate = sf.read(sample)
+        input_values = self.processor(audio_array, sampling_rate=self.sampling_rate).input_values[0]
+        input_values = torch.tensor(input_values, device=self.device).unsqueeze(0)
+
+        with self.processor.as_target_processor():
+            prompt_ids = self.processor(prompt_phones).input_ids
+            prompt_ids = torch.tensor(prompt_ids, device=self.device).unsqueeze(0)
+        
+        with torch.no_grad():
+            output = self.model(input_values, prompts=prompt_ids, labels=None, return_dict=True)
+            logits = output.logits
         logger.info('Warm up finished')
+    
 
     def forward(self, data):
         audio_array_list, prompt_list, word_boundaries_list = [], [], []
@@ -177,60 +205,69 @@ class Inference(TypedMsgPackMixin, Worker):
             word_boundaries_list += data[i][2]
                 
         audio_array = np.stack(audio_array_list)[0]
-        prompt = " ".join(prompt_list)
+        prompt_phones = " ".join(prompt_list)
         
         input_values = self.processor(audio_array, sampling_rate=self.sampling_rate).input_values[0]
         input_values = torch.tensor(input_values, device=self.device).unsqueeze(0)
 
         with self.processor.as_target_processor():
-            prompt_ids = self.processor(prompt).input_ids
+            prompt_ids = self.processor(prompt_phones).input_ids
             prompt_ids = torch.tensor(prompt_ids, device=self.device).unsqueeze(0)
         
-        output = self.model(input_values, prompts=prompt_ids, labels=None, return_dict=True)
-        logits = output.logits
-
+        with torch.no_grad():
+            output = self.model(
+                        input_values=input_values, 
+                        prompts=prompt_ids, 
+                        labels=prompt_ids, 
+                        return_dict=True
+                     )
+            # 1 * T * V
+            logits = output.logits
+            loss = output.loss
+        
         logits_detection = output.logits_detection_ppl # NOTE: detect
         decoded_output, decoded_offsets = self.decoder.decode(logits)
         
-        pred_phones = decoded_output[0][0]
-
-        prompt = " ".join(re.sub(r'sil', '', prompt).split())
-        pred_phones = " ".join(re.sub(r'sil', '', pred_phones).split())
-        per_result = calc_wer(prompt.split(), pred_phones.split())
-        logger.debug(f"word_boundaries_list: {word_boundaries_list}")
+        predict_phones = decoded_output[0][0]
+        # llm feedback
+        prompt_words = " ".join([ word for word, idx_info in word_boundaries_list])
+        fb_result = self.llm_feedback.get_text(
+                        prompt_words=prompt_words, 
+                        prompt_phones=prompt_phones, 
+                        predict_phones=predict_phones
+                    )
+        
+        # remove SIL
+        prompt_phones = " ".join(re.sub(r'sil', '', prompt_phones).split())
+        predict_phones = " ".join(re.sub(r'sil', '', predict_phones).split())
+        per_result = calc_wer(prompt_phones.split(), predict_phones.split())
+        
+        # compute gop (without silence)
+        with self.processor.as_target_processor():
+            prompt_ids = self.processor(prompt_phones).input_ids
+            prompt_ids = torch.tensor(prompt_ids, device=self.device).unsqueeze(0)
+        
+        self.compute_gop(labels=prompt_ids, logits=logits, loss=loss)
 
         eval_result = per_result.split("\n")[:-2][-1].split()[1:]
         eval_result_noins = [ er for er in eval_result if er != "I"]
 
-        logger.debug(f"eval_result: {eval_result}")
-        logger.debug(f"eval_result_noins: {eval_result_noins}")
-        '''
-         [
-            ["word1"]:
-                    [
-                        ["phone1": "C"], 
-                        ["phone2": "D"]
-                    ]
-            }, 
-            ["word2":
-                    [
-                        ["phone1": "S"]
-                    ]
-            ] 
-        ]
-        '''
         dictate_list = []
-        prompt_list = prompt.split()
+        prompt_list = prompt_phones.split()
 
         for word_info in word_boundaries_list:
             word, idx_info = word_info
             start_idx, end_idx = idx_info
-            phones = prompt[start_idx:end_idx]
+            phones = prompt_phones[start_idx:end_idx]
             phones_eval_list = [[prompt_list[i], eval_result_noins[i]] for i in range(start_idx,end_idx)]
 
             dictate_list.append([word, phones_eval_list])
         
-        capt_dict = {"Dictate": dictate_list}
+        capt_dict = {
+            "Dictate": dictate_list, 
+            "transcript": predict_phones, 
+            "feedback": fb_result
+        }
         
         logger.debug(capt_dict)
         logger.info("Inference Finished")
@@ -239,6 +276,64 @@ class Inference(TypedMsgPackMixin, Worker):
     
     def serialize(self, data):
         return data.encode("utf-8")
+     
+    def compute_gop(self, labels, logits, loss):
+        log_like_total = loss
+        labels = labels.clone().squeeze(0)
+        logits = logits.clone().squeeze(0)
+        
+        pids = labels.tolist()
+        num_labels = len(labels)
+        masks = [torch.arange(num_labels) != i for i in range(num_labels)]
+        post_mat = logits.softmax(dim=-1).transpose(0,1)
+        
+        for i, pid in enumerate(pids):
+            gop_feats = [log_like_total]
+            new_labels = labels[masks[i]]
+            ctc = self.ctc_loss(post_mat, new_labels, blank=0)
+            # lpp & lpr
+            gop_feats.append(-torch.log(ctc))
+            gop_feats.append(-log_like_total-torch.log(ctc))
+            print(pid, gop_feats)
+    
+    def ctc_loss(self, params, seq, blank=0):
+        """
+        CTC loss function.
+        params - n x m matrix of n-D probability distributions(softmax output) over m frames.
+        seq - sequence of phone id's for given example.
+        Returns objective, alphas and betas.
+        """
+        seqLen = seq.shape[0] # Length of label sequence (# phones)
+        numphones = params.shape[0] # Number of labels
+        L = 2*seqLen + 1 # Length of label sequence with blanks
+        T = params.shape[1] # Length of utterance (time)
+        
+        alphas = torch.zeros((L,T)).double()
+        # Initialize alphas and forward pass 
+        alphas[0,0] = params[blank,0]
+        alphas[1,0] = params[seq[0],0]
+        
+        for t in range(1, T):
+            start = max(0, L-2*(T-t)) 
+            end = min(2*t+2, L)
+            for s in range(start, L):
+                l = int((s-1)/2)
+                # blank
+                if s%2 == 0:
+                    if s==0:
+                        alphas[s, t] = alphas[s, t-1] * params[blank,t]
+                    else:
+                        alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1]) * params[blank, t]
+                # same label twice
+                elif s == 1 or seq[l] == seq[l-1]:
+                    alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1]) * params[seq[l], t]
+                else:
+                    alphas[s, t] = (alphas[s, t-1] + alphas[s-1, t-1] + alphas[s-2, t-1]) \
+                        * params[seq[l], t]
+                
+        forward_prob = (alphas[L-1, T-1] + alphas[L-2, T-1])
+        
+        return forward_prob
 
 if __name__ == "__main__":
     server = Server()
