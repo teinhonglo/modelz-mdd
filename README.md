@@ -11,7 +11,7 @@ pip install -r requirements.txt
 
 This will install the `mosec` framework and other necessary packages.
 
-## Setup
+## Preparation
 1. Download [model.zip](https://140.122.184.167:5567/sharing/qRaWMnSBC) and put it into *models/mdd/*
 2. cd models/mdd
 3. unzip wav2vec2-mdd.zip
