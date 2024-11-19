@@ -27,7 +27,7 @@ def main():
         
         # Extract the "transcript" field
         print(response_json)
-        transcript = response_json.get("transcript", None)
+        transcript = response_json.get("Transcript", None)
         if transcript:
             print("Transcript:", transcript)
         else:
